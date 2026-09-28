@@ -1,0 +1,14 @@
+services:
+  kp:
+    build: .
+    container_name: kp
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # логин/пароль первого администратора (создаётся при первом запуске)
+      KP_ADMIN_USERNAME: ${KP_ADMIN_USERNAME:-admin}
+      KP_ADMIN_PASSWORD: ${KP_ADMIN_PASSWORD:-admin}
+    volumes:
+      # база данных, история КП и ключ сессий — делайте резервную копию этой папки
+      - ./data:/data

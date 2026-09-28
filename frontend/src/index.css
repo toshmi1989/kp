@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50: #eef7ea;
+  --color-brand-100: #d9edcf;
+  --color-brand-200: #c5e0b3;
+  --color-brand-500: #3f9a3a;
+  --color-brand-600: #329234;
+  --color-brand-700: #276f29;
+  --color-brand-800: #1f5621;
+  --font-doc: "Times New Roman", Times, "Liberation Serif", serif;
+}
+
+html, body, #root { height: 100%; }
+body { @apply bg-slate-100 text-slate-800 antialiased; }
+
+/* редактируемые поля внутри «листа» КП (в слое components, чтобы утилиты
+   вроде font-bold/italic их переопределяли) */
+@layer components {
+  .doc-edit {
+    @apply rounded-sm outline-none transition-colors;
+    background: transparent;
+    border: 1px dashed transparent;
+    font: inherit; color: inherit; line-height: inherit; letter-spacing: inherit;
+    resize: none; overflow: hidden;
+  }
+  .doc-edit:hover { border-color: #93c5fd; background: #f0f7ff; }
+  .doc-edit:focus { border-color: #3b82f6; background: #eff6ff; border-style: solid; }
+  .doc-edit::placeholder { color: #cbd5e1; font-style: italic; }
+  .doc-edit.is-empty:not(:focus) { background: #fef9c3; border-color: #facc15; }
+}
+
+.doc-paper table { border-collapse: collapse; width: 100%; }
+.doc-paper td, .doc-paper th { border: 1px solid #000; vertical-align: middle; }
+.doc-paper th, .doc-paper .doc-group { background: #c5e0b3; }
