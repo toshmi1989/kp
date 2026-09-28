@@ -15,6 +15,18 @@ ADMIN_PASSWORD = os.environ.get("KP_ADMIN_PASSWORD", "admin")
 SESSION_DAYS = int(os.environ.get("KP_SESSION_DAYS", "30"))
 
 
+def normalized_base_path() -> str:
+    """Префикс портала, например /kp. Пусто — приложение на корне (отдельный запуск)."""
+    raw = (os.environ.get("KP_BASE_PATH") or os.environ.get("BASE_PATH") or "").strip()
+    if not raw or raw == "/":
+        return ""
+    return "/" + raw.strip("/")
+
+
+def cookie_path() -> str:
+    return normalized_base_path() or "/"
+
+
 def _secret_key() -> str:
     key = os.environ.get("KP_SECRET_KEY")
     if key:

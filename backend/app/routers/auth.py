@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from ..auth import (COOKIE_NAME, admin_user, current_user, hash_password,
                     make_token, verify_password)
-from ..config import SESSION_DAYS
+from ..config import SESSION_DAYS, cookie_path
 from ..db import get_db
 from ..models import User
 from ..schemas import LoginIn, UserIn, UserOut
@@ -13,19 +13,39 @@ from ..schemas import LoginIn, UserIn, UserOut
 router = APIRouter(prefix="/api", tags=["auth"])
 
 
+def _cookie_path() -> str | None:
+    path = cookie_path()
+    return None if path == "/" else path
+
+
+def _set_session(response: Response, token: str) -> None:
+    path = _cookie_path()
+    response.set_cookie(
+        COOKIE_NAME, token, max_age=SESSION_DAYS * 86400,
+        httponly=True, samesite="lax", **({"path": path} if path else {}),
+    )
+
+
+def _clear_session(response: Response) -> None:
+    path = _cookie_path()
+    if path:
+        response.delete_cookie(COOKIE_NAME, path=path)
+    else:
+        response.delete_cookie(COOKIE_NAME)
+
+
 @router.post("/login", response_model=UserOut)
 def login(data: LoginIn, response: Response, db: Session = Depends(get_db)):
     user = db.scalar(select(User).where(func.lower(User.username) == data.username.strip().lower()))
     if not user or not verify_password(data.password, user.password_hash):
         raise HTTPException(401, "Неверный логин или пароль")
-    response.set_cookie(COOKIE_NAME, make_token(user), max_age=SESSION_DAYS * 86400,
-                        httponly=True, samesite="lax")
+    _set_session(response, make_token(user))
     return user
 
 
 @router.post("/logout")
 def logout(response: Response):
-    response.delete_cookie(COOKIE_NAME)
+    _clear_session(response)
     return {"ok": True}
 
 
@@ -48,8 +68,7 @@ def change_password(data: PasswordIn, response: Response, user: User = Depends(c
         raise HTTPException(400, "Новый пароль — минимум 6 символов")
     user.password_hash = hash_password(data.new_password)
     db.commit()
-    response.set_cookie(COOKIE_NAME, make_token(user), max_age=SESSION_DAYS * 86400,
-                        httponly=True, samesite="lax")
+    _set_session(response, make_token(user))
     return {"ok": True}
 
 

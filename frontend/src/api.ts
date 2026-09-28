@@ -25,8 +25,19 @@ async function handle(res: Response) {
   throw new ApiError(res.status, msg)
 }
 
+/** Путь к файлу из frontend/public с учётом базового префикса портала (/kp/). */
+export function assetUrl(name: string): string {
+  const base = import.meta.env.BASE_URL || '/'
+  return `${base}${name.replace(/^\//, '')}`
+}
+
+function apiPrefix(): string {
+  const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '')
+  return `${base}/api`
+}
+
 export async function api<T>(path: string, opts: { method?: string; body?: unknown } = {}): Promise<T> {
-  const res = await fetch(`/api${path}`, {
+  const res = await fetch(`${apiPrefix()}${path}`, {
     method: opts.method ?? (opts.body !== undefined ? 'POST' : 'GET'),
     headers: opts.body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
     body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
@@ -39,7 +50,7 @@ export async function api<T>(path: string, opts: { method?: string; body?: unkno
 export async function upload<T>(path: string, file: File): Promise<T> {
   const fd = new FormData()
   fd.append('file', file)
-  const res = await fetch(`/api${path}`, { method: 'POST', body: fd, credentials: 'same-origin' })
+  const res = await fetch(`${apiPrefix()}${path}`, { method: 'POST', body: fd, credentials: 'same-origin' })
   await handle(res)
   return res.json() as Promise<T>
 }
@@ -52,7 +63,7 @@ function filenameFrom(res: Response, fallback: string) {
 
 /** Скачать файл (GET или POST с JSON) и сохранить у пользователя. */
 export async function download(path: string, fallbackName: string, body?: unknown) {
-  const res = await fetch(`/api${path}`, {
+  const res = await fetch(`${apiPrefix()}${path}`, {
     method: body !== undefined ? 'POST' : 'GET',
     headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
     body: body !== undefined ? JSON.stringify(body) : undefined,

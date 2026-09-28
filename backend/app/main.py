@@ -1,13 +1,13 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select
 
 from .auth import hash_password
-from .config import ADMIN_PASSWORD, ADMIN_USERNAME, FRONTEND_DIST
+from .config import ADMIN_PASSWORD, ADMIN_USERNAME, FRONTEND_DIST, normalized_base_path
 from .db import Base, SessionLocal, engine
 from .models import User
 from .routers import auth, proposals, services
@@ -31,25 +31,54 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="Генератор КП", docs_url="/api/docs", openapi_url="/api/openapi.json",
-              lifespan=lifespan)
-app.include_router(auth.router)
-app.include_router(services.router)
-app.include_router(proposals.router)
+def _mount_frontend(app: FastAPI, base: str) -> None:
+    if not FRONTEND_DIST.exists():
+        return
+    assets = FRONTEND_DIST / "assets"
+    if assets.is_dir():
+        app.mount(f"{base}/assets" if base else "/assets", StaticFiles(directory=assets), name="assets")
 
+    index = FRONTEND_DIST / "index.html"
 
-@app.get("/api/health")
-def health():
-    return {"ok": True}
-
-
-# собранный фронтенд (SPA): всё, что не /api, отдаёт index.html
-if FRONTEND_DIST.exists():
-    app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="assets")
-
-    @app.get("/{path:path}", include_in_schema=False)
-    def spa(path: str):
+    def spa_file(path: str) -> FileResponse:
         file = (FRONTEND_DIST / path).resolve()
         if path and file.is_file() and FRONTEND_DIST.resolve() in file.parents:
             return FileResponse(file)
-        return FileResponse(FRONTEND_DIST / "index.html")
+        return FileResponse(index)
+
+    if not base:
+        @app.get("/{path:path}", include_in_schema=False)
+        def spa(path: str):
+            return spa_file(path)
+        return
+
+    @app.get(base, include_in_schema=False)
+    @app.get(f"{base}/", include_in_schema=False)
+    def spa_index():
+        return FileResponse(index)
+
+    @app.get(f"{base}/{{full_path:path}}", include_in_schema=False)
+    def spa_prefixed(full_path: str):
+        if full_path == "api" or full_path.startswith("api/"):
+            raise HTTPException(404, "Not Found")
+        return spa_file(full_path)
+
+
+def create_app() -> FastAPI:
+    base = normalized_base_path()
+    app = FastAPI(title="Генератор КП", docs_url=f"{base}/api/docs",
+                  openapi_url=f"{base}/api/openapi.json", lifespan=lifespan)
+    router_prefix = {"prefix": base} if base else {}
+    app.include_router(auth.router, **router_prefix)
+    app.include_router(services.router, **router_prefix)
+    app.include_router(proposals.router, **router_prefix)
+
+    @app.get(f"{base}/api/health" if base else "/api/health")
+    def health():
+        return {"ok": True}
+
+    _mount_frontend(app, base)
+    return app
+
+
+app = create_app()

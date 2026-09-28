@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
-import { formatPrice, parsePrice } from '../api'
+import { assetUrl, formatPrice, parsePrice } from '../api'
 import type { ProposalData, ProposalItem, Stage } from '../types'
 import EditableText from './EditableText'
 
@@ -147,7 +147,7 @@ export default function Paper({ data, onChange, priceUnits = [], registry = {} }
 
       {/* шапка — неизменяемая часть бланка */}
       <div className="flex items-start">
-        <img src="/logo.jpg" alt="Логотип" style={{ width: '77mm', marginLeft: '-10mm', marginTop: '-1mm' }} />
+        <img src={assetUrl('logo.jpg')} alt="Логотип" style={{ width: '77mm', marginLeft: '-10mm', marginTop: '-1mm' }} />
         <div className="flex-1 text-center" style={{ marginLeft: '2mm' }}>
           <div className="font-bold">Автономная некоммерческая организация</div>
           <div className="font-bold">«Национальный научный центр фармаконадзора»</div>
@@ -368,7 +368,7 @@ export default function Paper({ data, onChange, priceUnits = [], registry = {} }
           <div>Генеральный директор</div>
           <div>АНО «ННЦ фармаконадзора»</div>
         </div>
-        <img src="/signature.jpg" alt="Подпись" style={{ width: '33mm', position: 'absolute', left: '82mm', bottom: '2mm' }} />
+        <img src={assetUrl('signature.jpg')} alt="Подпись" style={{ width: '33mm', position: 'absolute', left: '82mm', bottom: '2mm' }} />
         <div>А.Е. Крашенинников</div>
       </div>
     </div>

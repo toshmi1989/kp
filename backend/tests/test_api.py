@@ -145,3 +145,18 @@ def test_excel_roundtrip(client):
     assert [s["name"] for s in full["stages"]] == ["Первый этап", "Второй этап"]
     first = next(s for s in items if s["name"] == first_name)
     assert first["price"] == "99000.00"
+
+
+def test_portal_base_path(monkeypatch):
+    monkeypatch.setenv("BASE_PATH", "/kp")
+    from app.config import cookie_path, normalized_base_path
+    from app.main import create_app
+
+    assert normalized_base_path() == "/kp"
+    assert cookie_path() == "/kp"
+    with TestClient(create_app()) as c:
+        assert c.get("/kp/api/health").json() == {"ok": True}
+        assert c.get("/api/health").status_code == 404
+        login = c.post("/kp/api/login", json={"username": "admin", "password": "admin"})
+        assert login.status_code == 200, login.text
+        assert c.get("/kp/api/me").status_code == 200
